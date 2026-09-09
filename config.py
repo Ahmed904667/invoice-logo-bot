@@ -2,8 +2,16 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Base directory of the project
-BASE_DIR = Path(__file__).resolve().parent
+import sys
+
+# Base directory: handles normal python script execution and PyInstaller .exe bundle
+if getattr(sys, "frozen", False):
+    BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    EXE_DIR = Path(sys.executable).parent
+    # Prioritize external invoiceBg next to the .exe, otherwise use bundled template
+    BASE_DIR = EXE_DIR if any((EXE_DIR / f"invoiceBg{ext}").exists() for ext in [".jpeg", ".jpg", ".pdf", ".png"]) else BUNDLE_DIR
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 
 # Load environment variables from .env if present
 load_dotenv(BASE_DIR / ".env")

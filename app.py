@@ -8,8 +8,13 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageTk
 
-# Ensure project root is in sys.path
-BASE_DIR = Path(__file__).resolve().parent
+# Base directory: handles normal python script execution and PyInstaller .exe bundle
+if getattr(sys, "frozen", False):
+    BUNDLE_DIR = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    EXE_DIR = Path(sys.executable).parent
+    BASE_DIR = EXE_DIR if any((EXE_DIR / f"invoiceBg{ext}").exists() for ext in [".jpeg", ".jpg", ".pdf", ".png"]) else BUNDLE_DIR
+else:
+    BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
 import config
