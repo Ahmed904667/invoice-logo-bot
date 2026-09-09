@@ -1,6 +1,9 @@
 import io
 import logging
+import os
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 # Ensure UTF-8 output on Windows consoles
@@ -542,6 +545,36 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         await help_command(update, context)
 
 
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    """Simple HTTP handler so Render/cloud platforms detect an open port and stay healthy."""
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(b"ASC Invoice Logo Bot is online and healthy!")
+
+    def log_message(self, format, *args):
+        # Silence routine access log messages in terminal
+        pass
+
+
+def start_health_check_server():
+    """Starts a lightweight HTTP server on $PORT for Render / cloud health checks."""
+    import os
+    import threading
+    port_str = os.environ.get("PORT") or ("10000" if os.environ.get("RENDER") else None)
+    if not port_str:
+        return
+    try:
+        port = int(port_str)
+        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        print(f"🌐 خادم الفحص الصحي متصل على المنفذ {port} (Render Health Check Online)")
+    except Exception as e:
+        logger.warning(f"Could not start health check server: {e}")
+
+
 def main():
     """Start and run the Telegram Bot."""
     if not config.TELEGRAM_BOT_TOKEN or config.TELEGRAM_BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN_HERE":
@@ -551,6 +584,9 @@ def main():
         print("  TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz")
         print("=" * 70)
         sys.exit(1)
+
+    # Start health check server if on Render/cloud
+    start_health_check_server()
 
     print("جاري تشغيل البوت...")
     print(f"ملف الخلفية: {config.get_background_path().resolve()}")
